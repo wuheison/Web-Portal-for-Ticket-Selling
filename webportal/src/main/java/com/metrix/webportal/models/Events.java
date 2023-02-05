@@ -16,6 +16,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -45,7 +46,7 @@ public class Events implements Serializable {
     // 6. Annotation indicating this field in DB is not nullable
     @NotBlank(message = "Event Name must be provided!")
     @Size(max = 255, message = "Event Name must less than 255 characters!")
-    @Column(nullable = false)
+    @Column(length = 255, nullable = false)
     private String eventName;
 
     private boolean isStartSell;
@@ -53,6 +54,7 @@ public class Events implements Serializable {
     @Temporal(TemporalType.TIMESTAMP)
     // 7. Annotation for checking this field value should be a future date, if not,
     // view will show error message "Event Date must be a future date"
+    @Future(message = "Event Date must be a future date")
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private Date eventDtm;
 

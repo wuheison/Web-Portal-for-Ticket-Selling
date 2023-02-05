@@ -1,5 +1,11 @@
 package com.metrix.webportal.repos;
 
-public interface VenuesRepo extends /*1. extends a JPA class that provide CRUD function on Venues object*/{
-    
+import org.springframework.data.jpa.repository.*;
+import com.metrix.webportal.models.Venues;
+
+public interface VenuesRepo extends JpaRepository<Venues, Integer> /*
+                                                                    * 1. extends a JPA class that provide CRUD function
+                                                                    * on Venues object
+                                                                    */ {
+
 }
