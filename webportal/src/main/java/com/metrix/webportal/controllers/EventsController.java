@@ -1,5 +1,7 @@
 package com.metrix.webportal.controllers;
 
+import java.util.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -7,6 +9,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.metrix.webportal.models.Events;
 import com.metrix.webportal.repos.EventsRepo;
@@ -18,6 +21,7 @@ import jakarta.validation.Valid;
 //1. Annotation for Web MVC Controller
 //2. Annotation for handling request from "/events","/",""
 @Controller
+@RequestMapping({ "/events", "/", "" })
 
 public class EventsController {
     private static final String VIEW_PREFIX = "events/";
@@ -39,9 +43,9 @@ public class EventsController {
 
     // 4b. Annotation for handling HTTP GET request from "/create"
     @GetMapping("/create")
-    public String create(ModelMap m){
-        m.addAttribute("newEvent", new Events()/*6. create an empty Event */);
-        m.addAttribute("allVenues", /*7. get list of venue from DB*/);
+    public String create(ModelMap m) {
+        m.addAttribute("newEvent", new Events()/* 6. create an empty Event */);
+        m.addAttribute("allVenues", venuesRepo.findAll()/* 7. get list of venue from DB */);
         return VIEW_PREFIX + "create";
     }
 
@@ -59,7 +63,7 @@ public class EventsController {
          */
         if (result.hasErrors()) {
             m.addAttribute("newEvent", newEvent);
-            return "create";
+            return VIEW_PREFIX + "create";
         }
         /* 12. set the isStartSell to false, and then save newEvent object to DB */
         repo.save(newEvent);
@@ -68,12 +72,21 @@ public class EventsController {
 
     // 4c. Annotation for handling HTTP GET request from "/update/{id}"
     @GetMapping("/update/{id}")
-    public String update(ModelMap m, /*13. Annotation for mapping the variable "id" in the path*/ Integer id) throws MetrixException{
-        /*14. Find the Events from DB, if not found, throw the following exception
-              throw new MetrixException(-1, String.format("Event with id {%d} not found!", id), "/" + VIEW_PREFIX + "index"); */
+    public String update(ModelMap m, /* 13. Annotation for mapping the variable "id" in the path */ Integer id)
+            throws MetrixException {
+        /*
+         * 14. Find the Events from DB, if not found, throw the following exception
+         * throw new MetrixException(-1, String.format("Event with id {%d} not found!",
+         * id), "/" + VIEW_PREFIX + "index");
+         */
+        Optional<Events> _eventOptional = repo.findById(id);
+        if (!_eventOptional.isPresent()) {
+            throw new MetrixException(-1, String.format("Event with id {%d} not found!", id),
+                    "/" + VIEW_PREFIX + "index");
+        }
 
-        m.addAttribute("updEvent", /*15. pass the Events object from DB */);
-        m.addAttribute("allVenues", /*16. get the list of venues from DB */);
+        m.addAttribute("updEvent", _eventOptional.get()/* 15. pass the Events object from DB */);
+        m.addAttribute("allVenues", venuesRepo.findAll()/* 16. get the list of venues from DB */);
         return VIEW_PREFIX + "update";
     }
 
@@ -90,7 +103,11 @@ public class EventsController {
          * throw new MetrixException(-1, String.format("Event with id {%d} not found!",
          * id), "/" + VIEW_PREFIX + "index");
          */
-
+        Optional<Events> _eventOptional = repo.findById(id);
+        if (!_eventOptional.isPresent()) {
+            throw new MetrixException(-1, String.format("Event with id {%d} not found!", id),
+                    "/" + VIEW_PREFIX + "index");
+        }
         /*
          * 15. if there is change of venue, while this event linked to any tickets,
          * throw the following exception
@@ -98,12 +115,22 @@ public class EventsController {
          * "Event already has ticket sold, change of venue is not allowed", "/" +
          * VIEW_PREFIX + "update/" + id);
          */
+        if (updEvent.getVenue() != _eventOptional.get().getVenue()) {
+            throw new MetrixException(-1, "Event already has ticket sold, change of venue is not allowed",
+                    "/" + VIEW_PREFIX + "update/" + id);
+        }
 
         /*
          * 16. if binding result has error, assign suitable view objects (there are 2)
          * and return the view name VIEW_PREFIX + "update". You can refer to line 52-54
          */
+        if (result.hasErrors()) {
+            m.addAttribute("updEvent", updEvent);
+            return VIEW_PREFIX + "update";
+        }
+
         /* 17. save the updEvent to DB */
+        repo.save(updEvent);
         return "redirect:/" + VIEW_PREFIX + "index";
     }
 
@@ -116,6 +143,11 @@ public class EventsController {
          * throw new MetrixException(-1, String.format("Event with id {%d} not found!",
          * id), "/" + VIEW_PREFIX + "index");
          */
+        Optional<Events> _eventOptional = repo.findById(id);
+        if (!_eventOptional.isPresent()) {
+            throw new MetrixException(-1, String.format("Event with id {%d} not found!", id),
+                    "/" + VIEW_PREFIX + "index");
+        }
 
         /*
          * 18. if this event already have ticket sold, throw the following exception
@@ -123,7 +155,13 @@ public class EventsController {
          * "Event already has ticket sold, delete is not allowed! Please delete corresponding ticket(s) first"
          * , "/" + VIEW_PREFIX + "index");
          */
+        if (!_eventOptional.get().getTickets().isEmpty()) {
+            throw new MetrixException(-1,
+                    "Event already has ticket sold, delete is not allowed! Please delete corresponding ticket(s) first",
+                    "/" + VIEW_PREFIX + "index");
+        }
         /* 19. delete the record from DB by id */
+        repo.deleteById(id);
         return "redirect:/" + VIEW_PREFIX + "index";
     }
 }

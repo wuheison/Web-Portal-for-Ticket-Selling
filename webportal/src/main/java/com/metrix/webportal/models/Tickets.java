@@ -3,10 +3,6 @@ package com.metrix.webportal.models;
 import java.io.Serializable;
 import java.util.Date;
 
-import org.apache.poi.ss.formula.functions.DMax;
-import org.hibernate.annotations.DialectOverride.GeneratedColumns;
-
-import groovyjarjarantlr4.v4.runtime.misc.NotNull;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -14,7 +10,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.Max;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;

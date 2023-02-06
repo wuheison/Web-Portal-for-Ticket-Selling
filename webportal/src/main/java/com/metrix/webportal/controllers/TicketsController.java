@@ -9,6 +9,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.transaction.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.metrix.webportal.domains.SellForm;
 import com.metrix.webportal.models.Events;
@@ -18,53 +23,81 @@ import com.metrix.webportal.repos.TicketsRepo;
 import com.metrix.webportal.validation.MetrixException;
 import com.metrix.webportal.validation.TicketValidator;
 
+import jakarta.validation.Valid;
+
 //1. Annotation for Web MVC Controller
 //2. Annotation for handling request from "/tickets"
+@Controller
+@RequestMapping("/tickets")
+
 public class TicketsController {
     private static final String VIEW_PREFIX = "tickets/";
 
     private static final String HARD_CODE_OPERATOR = "Dummy Operator";
 
     // 3. Annotation for Dependency injection
+    @Autowired
     private TicketsRepo repo;
 
     // 3. Annotation for Dependency injection
+    @Autowired
     private EventsRepo eventsRepo;
 
     // 3. Annotation for Dependency injection
+    @Autowired
     private TicketValidator validator;
 
     // 4a. Annotation for handling HTTP GET request from "/list/{eventId}"
-    public String list(ModelMap m, /*5. Annotation for mapping the variable "eventId" in the path*/ Integer eventId) throws MetrixException{
-        /*6. Find the Events from DB, if not found, throw the following exception
-              throw new MetrixException(-1, "Event not found!", "/"); */        
-        
-        m.addAttribute("allTickets", /*7a. Get a list of tickets from events object from DB*/);
+    @GetMapping("/list/{eventId}")
+    public String list(ModelMap m, @ModelAttribute("eventID") /*
+                                                               * 5. Annotation for mapping the variable "eventId" in the
+                                                               * path
+                                                               */ Integer eventId) throws MetrixException {
+        /*
+         * 6. Find the Events from DB, if not found, throw the following exception
+         * throw new MetrixException(-1, "Event not found!", "/");
+         */
+        Optional<Events> _eventOptional = eventsRepo.findById(eventId);
+        if (!_eventOptional.isPresent()) {
+            throw new MetrixException(-1, "Event not found!", "/");
+        }
+        m.addAttribute("allTickets", _eventOptional.get().getTickets()/*
+                                                                       * 7a. Get a list of tickets from events object
+                                                                       * from DB
+                                                                       */);
         m.addAttribute("ticketDetail", new Tickets());
-        return VIEW_PREFIX + "list"; 
+        return VIEW_PREFIX + "list";
     }
 
     // 4b. Annotation for handling HTTP GET request from "/create"
-    public String create(ModelMap m){
+    @GetMapping("/create")
+    public String create(ModelMap m) {
         m.addAttribute("newSellForm", new SellForm());
-        m.addAttribute("allEvents", /*7b. Get a list of events object from DB*/);
+        m.addAttribute("allEvents", eventsRepo.findAll() /* 7b. Get a list of events object from DB */);
         return VIEW_PREFIX + "create";
     }
 
     // 8a. Annotation for handling HTTP POST request from "/create"
+    @PostMapping("/create")
     // 9. Annotation for Spring managing DB transaction through out the whole method
-    public String create(ModelMap m,
-            /* 9. Annotation for hibernate validation against newSellForm object */ /*
-                                                                                     * 10a. Annotation for mapping HTML
-                                                                                     * from body with name "newSellForm"
-                                                                                     */ SellForm newSellForm,
+    @Transactional
+    public String create(ModelMap m, @Valid @ModelAttribute("newSellForm")
+    /* 9. Annotation for hibernate validation against newSellForm object */ /*
+                                                                             * 10a. Annotation for mapping HTML
+                                                                             * from body with name "newSellForm"
+                                                                             */ SellForm newSellForm,
             BindingResult result) {
         // 11. valid the newSellForm from validator and put the validation result in
         // "result" object
+
         /*
          * 12. if binding result has error, assign suitable view objects (there are 2)
          * and return the view name VIEW_PREFIX + "create". You can refer to line 54-56
          */
+        if (result.hasErrors()) {
+            m.addAttribute("newSellForm", newSellForm);
+            return VIEW_PREFIX + "create";
+        }
 
         List<Tickets> ticketSold = new ArrayList<>();
         for (int i = 0; i < newSellForm.getNumberOfTicket(); i++) {
@@ -92,13 +125,14 @@ public class TicketsController {
     }
 
     // 4c. Annotation for handling HTTP GET request from "","/","/query"
+    @GetMapping({ "", "/", "/query" })
     public String query(ModelMap m) {
         m.addAttribute("ticketDetail", new Tickets());
         return VIEW_PREFIX + "query";
     }
 
     // 8b. Annotation for handling HTTP POST request from "/detail"
-    @GetMapping("/detail/{queryTicket}")
+    @PostMapping("/detail")
     public String detail(ModelMap m,
             /* 10b. Annotation for mapping HTML from body with name "ticketDetail" */ Tickets queryTicket)
             throws MetrixException {
@@ -113,6 +147,7 @@ public class TicketsController {
          * throw new MetrixException(-2, "Ticket not found!", "/" + VIEW_PREFIX +
          * "query");
          */
+
         Optional<Tickets> _ticketOptional = repo.filterQrcode(queryTicket.getQrcode());
         if (!_ticketOptional.isPresent()) {
             throw new MetrixException(-2, "Ticket not found!", "/" + VIEW_PREFIX + "query");
